@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
-import os
+from subprocess import call
 
 class ISOTPView(Frame):
     def __init__(self, root):
@@ -26,10 +26,10 @@ class ISOTPView(Frame):
         self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # create a pulldown menu, and add it to the menu bar
-        self.interface_var = StringVar()
-        self.source_var = StringVar()
-        self.destination_var = StringVar()
-        self.timer_var = StringVar()
+        self.window.interface_var = StringVar(self.window, value="can0")
+        self.window.source_var = StringVar(self.window, value="0x7e0")  # in hex
+        self.window.destination_var = StringVar(self.window, value="0x7df")  # in hex
+        self.window.timer_var = IntVar(self.window, value=0)  # in minutes
         self.menubar.add_command(label="Settings", command=self.settings)
 
         # create several buttons and add them to the menu bar
@@ -44,7 +44,7 @@ class ISOTPView(Frame):
         # Raw ISOTP View
         self.raw_isotp_view = ttk.Treeview(self.window, height=7)
         self.raw_isotp_view.bind("<<TreeviewSelect>>")
-        self.raw_isotp_view['columns'] = ('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.', 'Data')
+        self.raw_isotp_view['columns'] = ('Time', 'Source', 'Destination', 'extended Source', 'extended Dest.', 'Data')
         self.raw_isotp_view['show'] = 'headings'
         self.raw_isotp_view.grid(row=0, column=0, columnspan=6, sticky=N+E+S+W)
 
@@ -184,68 +184,74 @@ class Settings(Toplevel):
         # construction hooks
 
     def body(self, master):
-        body = Frame(self)
-        self.initial_focus = body
-        body.pack(padx=5, pady=5)
-        # create dialog body.  return widget that should have
-        # initial focus.  this method should be overridden
-        interface_label = Label(body, text="Interface:")
-        interface_label.grid(row=0, column=0)
-        interface_entry = Entry(body)
-        interface_entry.grid(row=0, column=1)
-        interface_info_label = Label(body, text="(e.g.: can0")
-        interface_info_label.grid(row=0, column=2)
+        self.body = Frame(self)
+        self.initial_focus = self.body
+        self.body.pack(padx=5, pady=5)
+        # create dialog body.  return widget that should have initial focus.
+        self.interface_label = Label(self.body, text="Interface:")
+        self.interface_label.grid(row=0, column=0)
+        self.interface_tooltip = "the interface to be sniffed"
+        self.interface_label.bind("<Enter>", self.on_enter)
+        self.interface_label.bind("<Leave>", self.on_leave)
+        self.interface_var_tmp = master.interface_var
+        self.interface_entry = Entry(self.body, textvariable=self.interface_var_tmp)
+        self.interface_entry.grid(row=0, column=1)
 
-        source_label = Label(body, text="SourceID:")
-        source_label.grid(row=1, column=0)
-        source_entry = Entry(body)
-        source_entry.grid(row=1, column=1)
-        source_info_label = Label(body, text="(e.g.: 0x7e8)")
-        source_info_label.grid(row=1, column=2)
+        self.source_label = Label(self.body, text="SourceID:")
+        self.source_label.grid(row=1, column=0)
+        self.source_tooltip = "source id in hex"
+        self.source_label.bind("<Enter>", self.on_enter)
+        self.source_label.bind("<Leave>", self.on_leave)
+        self.source_var_tmp = master.source_var
+        self.source_entry = Entry(self.body, textvariable=self.source_var_tmp)
+        self.source_entry.grid(row=1, column=1)
 
-        destination_label = Label(body, text="DestinationID:")
-        destination_label.grid(row=2, column=0)
-        destination_entry = Entry(body)
-        destination_entry.grid(row=2, column=1)
-        destination_info_label = Label(body, text="(e.g.:0x7ef)")
-        destination_info_label.grid(row=2, column=2)
+        self.destination_label = Label(self.body, text="DestinationID:")
+        self.destination_label.grid(row=2, column=0)
+        self.destination_tooltip = "destination id in hex"
+        self.destination_label.bind("<Enter>", self.on_enter)
+        self.destination_label.bind("<Leave>", self.on_leave)
+        self.destination_var_tmp = master.destination_var
+        self.destination_entry = Entry(self.body, textvariable=self.destination_var_tmp)
+        self.destination_entry.grid(row=2, column=1)
 
-        timer_label = Label(body, text="Timer:")
-        timer_label.grid(row=3, column=0)
-        timer_entry = Entry(body)
-        timer_entry.grid(row=3, column=1)
-        timer_info_label = Label(body, fg="orange", text="perpetual scanning")
-        timer_info_label.grid(row=3, column=2)
+        self.timer_label = Label(self.body, text="Timer:")
+        self.timer_label.grid(row=3, column=0)
+        self.timer_tooltip = "how long will be sniffed"
+        self.timer_label.bind("<Enter>", self.on_enter)
+        self.timer_label.bind("<Leave>", self.on_leave)
+        self.timer_var_tmp = master.timer_var
+        self.timer_entry = Entry(self.body, textvariable=self.timer_var_tmp)
+        self.timer_entry.grid(row=3, column=1)
 
     def buttonbox(self):
         # add standard button box. override if you don't want the
         # standard buttons
 
-        box = Frame(self)
+        self.box = Frame(self)
 
-        w = Button(box, text="OK", width=10, command=self.ok, default=ACTIVE)
-        w.pack(side=LEFT, padx=5, pady=5)
-        w = Button(box, text="Cancel", width=10, command=self.cancel)
-        w.pack(side=LEFT, padx=5, pady=5)
+        self.ok_button = Button(self.box, text="OK", width=10, command=self.ok, default=ACTIVE)
+        self.ok_button.pack(side=LEFT, padx=5, pady=5)
+        self.cancel_button = Button(self.box, text="Cancel", width=10, command=self.cancel)
+        self.cancel_button.pack(side=LEFT, padx=5, pady=5)
 
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)
 
-        box.pack()
+        self.box.pack()
 
         #
         # standard button semantics
 
     def ok(self, event=None):
 
-        if not self.validate():
+        if self.validate():
             self.initial_focus.focus_set()  # put focus back
             return
 
         self.withdraw()
         self.update_idletasks()
-
-        self.apply()
+        self.interface_var_tmp = self.parent.interface_var
 
         self.cancel()
 
@@ -259,12 +265,45 @@ class Settings(Toplevel):
         # command hooks
 
     def validate(self):
+        # check the entered parameters for validity
+        # if incorrect show error window and reset the values to the last correct ones
+        result = 0
 
-        return 1  # override
+        interface = self.interface_var_tmp.get()
+        if 0 != call("ip link show " + interface, shell=True):
+            self.interface_var_tmp = self.parent.interface_var
+            raise Exception("Device \"" + interface + "\" does not exist")
+            result = 1
 
-    def apply(self):
+        source = int(self.source_var_tmp.get(), 16)
+        if 0x800 <= source or source < 0x000:
+            print(source)
+            self.source_var_tmp = self.parent.source_var
+            raise Exception("Source ID is not in range(0x000, 0x800")
+            result = 1
 
-        pass  # override
+        destination = int(self.destination_var_tmp.get(), 16)
+        if 0x800 <= destination or destination < 0x000:
+            print(destination)
+            self.destination_var_tmp = self.parent.destination_var
+            raise Exception("Source ID is not in range(0x000, 0x800")
+            result = 1
+
+        timer = self.timer_var_tmp.get()
+        if 0 > timer or timer > 1440:
+            print(destination)
+            self.timer_var_tmp = self.parent.timer_var
+            raise Exception("Timer is not in range(0, 1440")
+            result = 1
+
+        return result
+
+    # tooltips yet to be implemented
+    def on_enter(self, event):
+        pass
+
+    def on_leave(self, enter):
+        pass
 
 
 def main():

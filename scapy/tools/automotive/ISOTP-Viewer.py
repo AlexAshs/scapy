@@ -14,12 +14,28 @@ class ISOTPView(Frame):
         Grid.rowconfigure(self.window, 0, weight=1)
         # to set the vertical stretch factor to 1
         Grid.columnconfigure(self.window, 0, weight=1)
+        Grid.columnconfigure(self.window, 1, weight=1)
+        Grid.columnconfigure(self.window, 2, weight=1)
 
-        # menubar
+        # build the window body
+        self.menubar()
+        self.isotp_view()
+        self.uds_view()
+        self.obd_view()
+
+        # set minimum window size to currently needed window size
+        self.window.update()
+        self.window.minsize(self.window.winfo_width(), self.window.winfo_height())
+
+        # open settings to force initial configuration and parametercheck
+        self.settings()
+
+    def menubar(self):
+        # menu
         self.menubar = Menu(self.window)
 
         # create a pulldown menu, and add it to the menu bar
-        # when assigning a command, never use parenthesis, beacause they call the function right away
+        # when assigning a command, never use parenthesis, because they call the function right away
         self.file_menu = Menu(self.menubar, tearoff=0)
         self.file_menu.add_command(label="Import", command=self.import_data)
         self.file_menu.add_command(label="Save", command=self.save)
@@ -42,107 +58,90 @@ class ISOTPView(Frame):
         # display the menu
         self.window.config(menu=self.menubar)
 
-        # Raw ISOTP View
-        self.raw_isotp_view = ttk.Treeview(self.window, height=7)
-        self.raw_isotp_view.bind("<<TreeviewSelect>>")
-        self.raw_isotp_view['columns'] = ('Time', 'Source', 'Destination', 'extended Source', 'extended Dest.', 'Data')
-        self.raw_isotp_view['show'] = 'headings'
-        self.raw_isotp_view.grid(row=0, column=0, columnspan=6, sticky=N+E+S+W)
+    def isotp_view(self):
+        self.isotp_view = Frame(self.window)
+        self.isotp_view.grid(row=0, column=0, columnspan=1, sticky=N + E + S + W)
 
-        for col in self.raw_isotp_view['columns']:
-            self.raw_isotp_view.column(col, width=130)
-            self.raw_isotp_view.heading(col, text=col)
+        self.raw_isotp_tree = ttk.Treeview(self.isotp_view, height=7)
+        self.raw_isotp_tree.bind("<<TreeviewSelect>>")
+        self.raw_isotp_tree['columns'] = ('Time', 'Source', 'Destination', 'extended Source', 'extended Destination', 'Data')
+        self.raw_isotp_tree['show'] = 'headings'
+        self.raw_isotp_tree.grid(row=0, column=0, sticky=N + E + S + W)
 
-        tree_data = [
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF")
-        ]
+        vsb = ttk.Scrollbar(self.isotp_view, orient="vertical", command=self.raw_isotp_tree.yview)
+        vsb.grid(row=0, column=1, sticky=N + E + S + W)
+        self.raw_isotp_tree.configure(yscrollcommand=vsb.set)
 
-        no = 1
-        for data in tree_data:
-            self.raw_isotp_view.insert("", no, text='{0:04d}'.format(no), values=data)
-            no += 1
+        for col in self.raw_isotp_tree['columns']:
+            self.raw_isotp_tree.column(col, width=150)
+            self.raw_isotp_tree.heading(col, text=col)
 
-        # Raw UDS View
-        self.raw_uds_view = ttk.Treeview(self.window, height=7)
-        self.raw_uds_view.bind("<<TreeviewSelect>>")
-        self.raw_uds_view['columns'] = ('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.', 'Service')
-        self.raw_uds_view['show'] = 'headings'
-        self.raw_uds_view.grid(row=1, column=0, columnspan=4, sticky=N+E+S+W)
+    def uds_view(self):
+        self.uds_view = Frame(self.window)
+        self.uds_view.grid(row=1, column=0, columnspan=1, sticky=N + E + S + W)
 
-        for col in self.raw_uds_view['columns']:
-            self.raw_uds_view.column(col, width=84)
-            self.raw_uds_view.heading(col, text=col)
+        # Raw UDS view
+        self.raw_uds_view = Frame(self.uds_view)
+        self.raw_uds_view.grid(row=0, column=0, sticky=N + E + S + W)
 
-        tree_data = [
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF")
-        ]
+        self.raw_uds_tree = ttk.Treeview(self.raw_uds_view, height=7)
+        self.raw_uds_tree.bind("<<TreeviewSelect>>")
+        self.raw_uds_tree['columns'] = ('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.', 'Service')
+        self.raw_uds_tree['show'] = 'headings'
+        self.raw_uds_tree.pack(side=LEFT, fill=BOTH)
 
-        no = 1
-        for data in tree_data:
-            self.raw_uds_view.insert("", no, text='{0:04d}'.format(no), values=data)
-            no += 1
+        vsb = ttk.Scrollbar(self.raw_uds_view, orient="vertical", command=self.raw_uds_tree.yview)
+        vsb.pack(side=RIGHT, fill=Y)
+        self.raw_uds_tree.configure(yscrollcommand=vsb.set)
 
-        # Detail UDS View
-        self.detail_uds_view = ttk.Treeview(self.window, height=7)
-        self.detail_uds_view.bind("<<TreeviewSelect>>")
-        self.detail_uds_view['columns'] = ('UDS', 'Src:', 'Dst:')
-        self.detail_uds_view['show'] = 'headings'
-        self.detail_uds_view.grid(row=1, column=4, columnspan=2, sticky=N+E+S+W)
+        for col in self.raw_uds_tree['columns']:
+            self.raw_uds_tree.column(col, width=105)
+            self.raw_uds_tree.heading(col, text=col)
 
-        for col in self.detail_uds_view['columns']:
-            self.detail_uds_view.column(col, width=84)
-            self.detail_uds_view.heading(col, text=col)
+        # Detail UDS tree
+        self.detail_uds_tree = ttk.Treeview(self.uds_view, height=7)
+        self.detail_uds_tree.bind("<<TreeviewSelect>>")
+        self.detail_uds_tree['columns'] = ('UDS', 'Src:', 'Dst:')
+        self.detail_uds_tree['show'] = 'headings'
+        self.detail_uds_tree.grid(row=0, column=1, sticky=N + E + S + W)
 
-        # Raw OBD View
-        self.raw_obd_view = ttk.Treeview(self.window, height=7)
-        self.raw_obd_view.bind("<<TreeviewSelect>>")
-        self.raw_obd_view['columns'] =\
+        for col in self.detail_uds_tree['columns']:
+            self.detail_uds_tree.column(col, width=90)
+            self.detail_uds_tree.heading(col, text=col)
+
+    def obd_view(self):
+        self.obd_view = Frame(self.window, width=600)
+        self.obd_view.grid(row=2, column=0, columnspan=1, sticky=N + E + S + W)
+
+        # Raw OBD view
+        self.raw_obd_view = Frame(self.obd_view)
+        self.raw_obd_view.grid(row=0, column=0, sticky=N + E + S + W)
+
+        self.raw_obd_tree = ttk.Treeview(self.raw_obd_view, height=7)
+        self.raw_obd_tree.bind("<<TreeviewSelect>>")
+        self.raw_obd_tree['columns'] = \
             ('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.', 'Service', 'PID')
-        self.raw_obd_view['show'] = 'headings'
-        self.raw_obd_view.grid(row=2, column=0, columnspan=4, sticky=N+E+S+W)
+        self.raw_obd_tree['show'] = 'headings'
+        self.raw_obd_tree.pack(side=LEFT, fill=BOTH)
 
-        for col in self.raw_obd_view['columns']:
-            self.raw_obd_view.column(col, width=84)
-            self.raw_obd_view.heading(col, text=col)
+        vsb = ttk.Scrollbar(self.raw_obd_view, orient="vertical", command=self.raw_obd_tree.yview)
+        vsb.pack(side=RIGHT, fill=Y)
+        self.raw_obd_tree.configure(yscrollcommand=vsb.set)
 
-        tree_data = [
-            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF", 0x00)
-        ]
+        for col in self.raw_obd_tree['columns']:
+            self.raw_obd_tree.column(col, width=90)
+            self.raw_obd_tree.heading(col, text=col)
 
-        no = 1
-        for data in tree_data:
-            self.raw_obd_view.insert("", no, text='{0:04d}'.format(no), values=data)
-            no += 1
+        # Detail OBD tree
+        self.detail_obd_tree = ttk.Treeview(self.obd_view, height=7)
+        self.detail_obd_tree.bind("<<TreeviewSelect>>")
+        self.detail_obd_tree['columns'] = ('OBD', 'Src:', 'Dst:')
+        self.detail_obd_tree['show'] = 'headings'
+        self.detail_obd_tree.grid(row=0, column=1, sticky=N + E + S + W)
 
-        # Detail OBD View
-        self.detail_obd_view = ttk.Treeview(self.window, height=7)
-        self.detail_obd_view.bind("<<TreeviewSelect>>")
-        self.detail_obd_view['columns'] = ('OBD', 'Src:', 'Dst:')
-        self.detail_obd_view['show'] = 'headings'
-        self.detail_obd_view.grid(row=2, column=4, columnspan=2, sticky=N+E+S+W)
-
-        for col in self.detail_obd_view['columns']:
-            self.detail_obd_view.column(col, width=72)
-            self.detail_obd_view.heading(col, text=col)
-
-        # set minimum window size to currently needed window size
-        self.window.update()
-        self.window.minsize(self.window.winfo_width(), self.window.winfo_height())
-
-        # open settings to force initial configuration and parametercheck
-        self.settings()
+        for col in self.detail_obd_tree['columns']:
+            self.detail_obd_tree.column(col, width=90)
+            self.detail_obd_tree.heading(col, text=col)
 
     def hello(self):
         print("hello!")

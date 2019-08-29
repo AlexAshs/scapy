@@ -41,19 +41,33 @@ class Settings(Toplevel):
         self.initial_focus = self.body
         self.body.pack(padx=5, pady=5)
         # create dialog body.  return widget that should have initial focus.
-        self.interface_label = Label(self.body, text="Interface:")
+        self.interface_label = Label(self.body, text="interface:")
         self.interface_label.grid(row=0, column=0)
         self.interface_tooltip = "the interface to be sniffed"
         self.interface_var_tmp = StringVar(self.body, master.interface_var.get())
         self.interface_entry = Entry(self.body, textvariable=self.interface_var_tmp)
         self.interface_entry.grid(row=0, column=1)
 
+        self.channel_label = Label(self.body, text="channel:")
+        self.channel_label.grid(row=1, column=0)
+        self.channel_tooltip = "the channel to be sniffed"
+        self.channel_var_tmp = StringVar(self.body, master.channel_var.get())
+        self.channel_entry = Entry(self.body, textvariable=self.channel_var_tmp)
+        self.channel_entry.grid(row=1, column=1)
+
+        self.bitrate_label = Label(self.body, text="bitrate:")
+        self.bitrate_label.grid(row=2, column=0)
+        self.bitrate_tooltip = "the bitrate to be sniffed"
+        self.bitrate_var_tmp = IntVar(self.body, master.bitrate_var.get())
+        self.bitrate_entry = Entry(self.body, textvariable=self.bitrate_var_tmp)
+        self.bitrate_entry.grid(row=2, column=1)
+
         self.timer_label = Label(self.body, text="Timer:")
-        self.timer_label.grid(row=3, column=0)
+        self.timer_label.grid(row=5, column=0)
         self.timer_tooltip = "how long will be sniffed"
         self.timer_var_tmp = IntVar(self.body, master.timer_var.get())
         self.timer_entry = Entry(self.body, textvariable=self.timer_var_tmp)
-        self.timer_entry.grid(row=3, column=1)
+        self.timer_entry.grid(row=5, column=1)
 
     def buttonbox(self):
         self.box = Frame(self)
@@ -91,9 +105,17 @@ class Settings(Toplevel):
         errors = dict()
 
         interface = self.interface_var_tmp.get()
-        if 0 != call("ip link show " + interface, shell=True):
-            self.interface_var_tmp.set(self.parent.interface_var.get())
-            errors["interface"] = "Device \"" + interface + "\" does not exist"
+        #  validation yet to beimplemented
+
+        channel = self.channel_var_tmp.get()
+        if 0 != call("ip link show " + channel, shell=True):
+            self.channel_var_tmp.set(self.parent.channel_var.get())
+            errors["channel"] = "Device \"" + channel + "\" does not exist"
+
+        bitrate = self.bitrate_var_tmp.get()
+        if 0 > bitrate or bitrate > 1000000:
+            self.bitrate_var_tmp.set(self.parent.bitrate_var.get())
+            errors["bitrate"] = "bitrate is not in range(0, 1000000)"
 
         timer = self.timer_var_tmp.get()
         if 0 > timer or timer > 1440:
@@ -105,4 +127,6 @@ class Settings(Toplevel):
 
     def save(self):
         self.parent.interface_var.set(self.interface_var_tmp.get())
+        self.parent.channel_var.set(self.channel_var_tmp.get())
+        self.parent.bitrate_var.set(self.bitrate_var_tmp.get())
         self.parent.timer_var.set(self.timer_var_tmp.get())

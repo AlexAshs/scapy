@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk, filedialog
 from scapy.tools.automotive.Settings import Settings
 from scapy.tools.automotive.PopUp import PopUp
+from scapy.tools.automotive.Sniffer import Sniffer
 from datetime import timedelta
 
 
@@ -12,10 +13,10 @@ class ISOTPView(Frame):
         self.window.title("ISOTP-View")
         # to set the horizontal stretch factor to 1
         Grid.rowconfigure(self.window, 0, weight=1)
+        Grid.rowconfigure(self.window, 1, weight=1)
+        Grid.rowconfigure(self.window, 2, weight=1)
         # to set the vertical stretch factor to 1
         Grid.columnconfigure(self.window, 0, weight=1)
-        Grid.columnconfigure(self.window, 1, weight=1)
-        Grid.columnconfigure(self.window, 2, weight=1)
 
         # build the window body
         self.menubar()
@@ -45,6 +46,8 @@ class ISOTPView(Frame):
 
         # create a pulldown menu, and add it to the menu bar
         self.window.interface_var = StringVar(self.window, value="vcan0")
+        self.window.channel_var = StringVar(self.window, value="vcan0")
+        self.window.bitrate_var = IntVar(self.window, value=500000)
         self.window.timer_var = IntVar(self.window, value=0)  # in minutes
         self.menubar.add_command(label="Settings", command=self.settings)
 
@@ -53,7 +56,7 @@ class ISOTPView(Frame):
         self.menubar.add_command(label="Run", command=self.run)
         self.menubar.add_command(label="Stop", command=self.stop, state=DISABLED)
         self.menubar.add_command(label="Help", command=self.help)
-        self.menubar.add_command(label="Perpetual Scanning", foreground="green")
+        self.menubar.add_command(label="Perpetual Scanning", foreground='green')
 
         # display the menu
         self.window.config(menu=self.menubar)
@@ -62,13 +65,14 @@ class ISOTPView(Frame):
         self.isotp_view = Frame(self.window)
         self.isotp_view.grid(row=0, column=0, columnspan=1, sticky=N + E + S + W)
 
-        self.raw_isotp_tree = ttk.Treeview(self.isotp_view, height=7)
-        self.raw_isotp_tree.bind("<<TreeviewSelect>>")
-        self.raw_isotp_tree['columns'] = ('Time', 'Source', 'Destination', 'extended Source', 'extended Destination', 'Data')
-        self.raw_isotp_tree['show'] = 'headings'
+        self.raw_isotp_tree = ttk.Treeview(self.isotp_view, height=7,
+                                           columns=('Time', 'Source', 'Destination', 'extended Source',
+                                                    'extended Destination', 'Data'),
+                                           show='headings')
+        self.raw_isotp_tree.bind('<<TreeviewSelect>>')
         self.raw_isotp_tree.grid(row=0, column=0, sticky=N + E + S + W)
 
-        vsb = ttk.Scrollbar(self.isotp_view, orient="vertical", command=self.raw_isotp_tree.yview)
+        vsb = ttk.Scrollbar(self.isotp_view, orient='vertical', command=self.raw_isotp_tree.yview)
         vsb.grid(row=0, column=1, sticky=N + E + S + W)
         self.raw_isotp_tree.configure(yscrollcommand=vsb.set)
 
@@ -84,13 +88,14 @@ class ISOTPView(Frame):
         self.raw_uds_view = Frame(self.uds_view)
         self.raw_uds_view.grid(row=0, column=0, sticky=N + E + S + W)
 
-        self.raw_uds_tree = ttk.Treeview(self.raw_uds_view, height=7)
-        self.raw_uds_tree.bind("<<TreeviewSelect>>")
-        self.raw_uds_tree['columns'] = ('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.', 'Service')
-        self.raw_uds_tree['show'] = 'headings'
+        self.raw_uds_tree = ttk.Treeview(self.raw_uds_view, height=7,
+                                         columns=('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.',
+                                                  'Service'),
+                                         show='headings')
+        self.raw_uds_tree.bind('<<TreeviewSelect>>')
         self.raw_uds_tree.pack(side=LEFT, fill=BOTH)
 
-        vsb = ttk.Scrollbar(self.raw_uds_view, orient="vertical", command=self.raw_uds_tree.yview)
+        vsb = ttk.Scrollbar(self.raw_uds_view, orient='vertical', command=self.raw_uds_tree.yview)
         vsb.pack(side=RIGHT, fill=Y)
         self.raw_uds_tree.configure(yscrollcommand=vsb.set)
 
@@ -99,10 +104,10 @@ class ISOTPView(Frame):
             self.raw_uds_tree.heading(col, text=col)
 
         # Detail UDS tree
-        self.detail_uds_tree = ttk.Treeview(self.uds_view, height=7)
-        self.detail_uds_tree.bind("<<TreeviewSelect>>")
-        self.detail_uds_tree['columns'] = ('UDS', 'Src:', 'Dst:')
-        self.detail_uds_tree['show'] = 'headings'
+        self.detail_uds_tree = ttk.Treeview(self.uds_view, height=7,
+                                            columns=('UDS', 'Src:', 'Dst:'),
+                                            show='headings')
+        self.detail_uds_tree.bind('<<TreeviewSelect>>')
         self.detail_uds_tree.grid(row=0, column=1, sticky=N + E + S + W)
 
         for col in self.detail_uds_tree['columns']:
@@ -117,14 +122,14 @@ class ISOTPView(Frame):
         self.raw_obd_view = Frame(self.obd_view)
         self.raw_obd_view.grid(row=0, column=0, sticky=N + E + S + W)
 
-        self.raw_obd_tree = ttk.Treeview(self.raw_obd_view, height=7)
-        self.raw_obd_tree.bind("<<TreeviewSelect>>")
-        self.raw_obd_tree['columns'] = \
-            ('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.', 'Service', 'PID')
-        self.raw_obd_tree['show'] = 'headings'
+        self.raw_obd_tree = ttk.Treeview(self.raw_obd_view, height=7,
+                                         columns=('Time', 'Source', 'Destination', 'ext. Source', 'ext. Dest.',
+                                                  'Service', 'PID'),
+                                         show='headings')
+        self.raw_obd_tree.bind('<<TreeviewSelect>>')
         self.raw_obd_tree.pack(side=LEFT, fill=BOTH)
 
-        vsb = ttk.Scrollbar(self.raw_obd_view, orient="vertical", command=self.raw_obd_tree.yview)
+        vsb = ttk.Scrollbar(self.raw_obd_view, orient='vertical', command=self.raw_obd_tree.yview)
         vsb.pack(side=RIGHT, fill=Y)
         self.raw_obd_tree.configure(yscrollcommand=vsb.set)
 
@@ -133,10 +138,10 @@ class ISOTPView(Frame):
             self.raw_obd_tree.heading(col, text=col)
 
         # Detail OBD tree
-        self.detail_obd_tree = ttk.Treeview(self.obd_view, height=7)
-        self.detail_obd_tree.bind("<<TreeviewSelect>>")
-        self.detail_obd_tree['columns'] = ('OBD', 'Src:', 'Dst:')
-        self.detail_obd_tree['show'] = 'headings'
+        self.detail_obd_tree = ttk.Treeview(self.obd_view, height=7,
+                                            columns=('OBD', 'Src:', 'Dst:'),
+                                            show='headings')
+        self.detail_obd_tree.bind('<<TreeviewSelect>>')
         self.detail_obd_tree.grid(row=0, column=1, sticky=N + E + S + W)
 
         for col in self.detail_obd_tree['columns']:
@@ -169,14 +174,22 @@ class ISOTPView(Frame):
         self.menubar.entryconfig(3, state=DISABLED)
         self.menubar.entryconfig(4, state=NORMAL)
         self.time_left = timedelta(minutes=self.window.timer_var.get())
-        self.timer()
+        self.sniff()
+        if self.window.timer_var.get() > 0:
+            self.timer()
+
+    def sniff(self):
+        self.sniffer = Sniffer(self.window, self.window.interface_var.get(), self.window.channel_var.get(),
+        self.window.bitrate_var.get())
+        self.sniffer.start()
 
     def stop(self):
         self.window.running_var.set(False)
         self.menubar.entryconfig(3, state=NORMAL)
         self.menubar.entryconfig(4, state=DISABLED)
+        self.sniffer.stop()
 
-    def timer(self, ):
+    def timer(self):
         if self.time_left > timedelta(seconds=0) and self.window.running_var.get():
             self.menubar.entryconfig(6, label="Time left: " + str(self.time_left))
             self.time_left -= timedelta(seconds=1)
@@ -187,7 +200,7 @@ class ISOTPView(Frame):
 
     def help(self):
         self.help_dict = dict()
-        self.help_dict["Description"] = "This tool monitors all ISOTP messages on the specified interface"
+        self.help_dict["Description"] = "This tool monitors all ISOTP messages on the specified channel"
         self.help_dict["Description"] = ""
         PopUp(self.window, self.help_dict, "Help")
 

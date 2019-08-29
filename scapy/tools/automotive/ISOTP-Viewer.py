@@ -1,7 +1,8 @@
 from tkinter import *
 from tkinter import ttk, filedialog
 from scapy.tools.automotive.Settings import Settings
-from scapy.tools.automotive.Error import Error
+from scapy.tools.automotive.PopUp import PopUp
+from datetime import timedelta
 
 
 class ISOTPView(Frame):
@@ -27,17 +28,16 @@ class ISOTPView(Frame):
         self.menubar.add_cascade(label="File", menu=self.file_menu)
 
         # create a pulldown menu, and add it to the menu bar
-        self.window.interface_var = StringVar(self.window, value="can0")
-        self.window.source_var = StringVar(self.window, value="0x7e0")  # in hex
-        self.window.destination_var = StringVar(self.window, value="0x7df")  # in hex
+        self.window.interface_var = StringVar(self.window, value="vcan0")
         self.window.timer_var = IntVar(self.window, value=0)  # in minutes
         self.menubar.add_command(label="Settings", command=self.settings)
 
         # create several buttons and add them to the menu bar
-        self.menubar.add_command(label="Run", command=self.hello)
-        self.menubar.add_command(label="Stop", command=self.hello)
-        self.menubar.add_command(label="Rerun", command=self.hello)
-        self.menubar.add_command(label="Timer", command=self.hello)
+        self.window.running_var = BooleanVar(self.window, value=False)
+        self.menubar.add_command(label="Run", command=self.run)
+        self.menubar.add_command(label="Stop", command=self.stop, state=DISABLED)
+        self.menubar.add_command(label="Help", command=self.help)
+        self.menubar.add_command(label="Perpetual Scanning", foreground="green")
 
         # display the menu
         self.window.config(menu=self.menubar)
@@ -74,6 +74,18 @@ class ISOTPView(Frame):
             self.raw_uds_view.heading(col, text=col)
 
         tree_data = [
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
+            (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF"),
             (124.01, 0x123, 0x321, 0x03, 0x01, "ABCDEF")
         ]
 
@@ -151,7 +163,34 @@ class ISOTPView(Frame):
         print("yet to be implemented")
 
     def settings(self):
-        settings_menu = Settings(self.window)
+        Settings(self.window)
+
+    def run(self):
+        self.window.running_var.set(True)
+        self.menubar.entryconfig(3, state=DISABLED)
+        self.menubar.entryconfig(4, state=NORMAL)
+        self.time_left = timedelta(minutes=self.window.timer_var.get())
+        self.timer()
+
+    def stop(self):
+        self.window.running_var.set(False)
+        self.menubar.entryconfig(3, state=NORMAL)
+        self.menubar.entryconfig(4, state=DISABLED)
+
+    def timer(self, ):
+        if self.time_left > timedelta(seconds=0):
+            self.menubar.entryconfig(6, label="Time left: " + str(self.time_left))
+            self.time_left -= timedelta(seconds=1)
+            self.window.after(1000, self.timer)
+        else:
+            self.menubar.entryconfig(6, state=NORMAL, label="Done!")
+            self.stop()
+
+    def help(self):
+        self.help_dict = dict()
+        self.help_dict["Description"] = "This tool monitors all ISOTP messages on the specified interface"
+        self.help_dict["Description"] = ""
+        PopUp(self.window, self.help_dict, "Help")
 
 
 def main():

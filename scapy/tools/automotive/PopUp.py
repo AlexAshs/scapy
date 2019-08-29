@@ -1,17 +1,19 @@
 from tkinter import *
 
 
-class Error(Toplevel):
-    def __init__(self, parent, errors, title="Error"):
+class PopUp(Toplevel):
+    def __init__(self, parent, lines, title):
         Toplevel.__init__(self, parent)
         # associatest the popup window with the parent window -> no extra icon in task bar
         self.transient(parent)
         if title:
             self.title(title)
         self.parent = parent
-        self.errors = ""
-        for value in errors.values():
-            self.errors += value + "\n"
+        self.resizable(False, False)
+
+        self.text = ""
+        for line in lines.values():
+            self.text += line + "\n"
 
         # builds the settings
         self.body(parent)
@@ -41,7 +43,7 @@ class Error(Toplevel):
         self.initial_focus = self.body
         self.body.pack(padx=5, pady=5)
         # create dialog body.  return widget that should have initial focus.
-        self.message_label = Label(self.body, text=self.errors)
+        self.message_label = Label(self.body, text=self.text)
         self.message_label.grid(row=0, column=0)
 
     def buttonbox(self):

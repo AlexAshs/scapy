@@ -1,6 +1,6 @@
 from tkinter import *
 from subprocess import call
-from scapy.tools.automotive.Error import Error
+from scapy.tools.automotive.PopUp import PopUp
 
 
 class Settings(Toplevel):
@@ -11,6 +11,7 @@ class Settings(Toplevel):
         if title:
             self.title(title)
         self.parent = parent
+        self.resizable(False, False)
 
         # builds the settings
         self.body(parent)
@@ -43,28 +44,14 @@ class Settings(Toplevel):
         self.interface_label = Label(self.body, text="Interface:")
         self.interface_label.grid(row=0, column=0)
         self.interface_tooltip = "the interface to be sniffed"
-        self.interface_var_tmp = master.interface_var
+        self.interface_var_tmp = StringVar(self.body, master.interface_var.get())
         self.interface_entry = Entry(self.body, textvariable=self.interface_var_tmp)
         self.interface_entry.grid(row=0, column=1)
-
-        self.source_label = Label(self.body, text="SourceID:")
-        self.source_label.grid(row=1, column=0)
-        self.source_tooltip = "source id in hex"
-        self.source_var_tmp = master.source_var
-        self.source_entry = Entry(self.body, textvariable=self.source_var_tmp)
-        self.source_entry.grid(row=1, column=1)
-
-        self.destination_label = Label(self.body, text="DestinationID:")
-        self.destination_label.grid(row=2, column=0)
-        self.destination_tooltip = "destination id in hex"
-        self.destination_var_tmp = master.destination_var
-        self.destination_entry = Entry(self.body, textvariable=self.destination_var_tmp)
-        self.destination_entry.grid(row=2, column=1)
 
         self.timer_label = Label(self.body, text="Timer:")
         self.timer_label.grid(row=3, column=0)
         self.timer_tooltip = "how long will be sniffed"
-        self.timer_var_tmp = master.timer_var
+        self.timer_var_tmp = IntVar(self.body, master.timer_var.get())
         self.timer_entry = Entry(self.body, textvariable=self.timer_var_tmp)
         self.timer_entry.grid(row=3, column=1)
 
@@ -82,10 +69,13 @@ class Settings(Toplevel):
         self.box.pack()
 
     def ok(self, event=None):
-        if self.validate():
+        errors = self.validate()
+        if errors:
+            PopUp(self, errors, "Error")  # raise error popup window
             self.initial_focus.focus_set()  # put focus back
             return
 
+        self.save()
         self.withdraw()
         self.update_idletasks()
         self.cancel()
@@ -102,24 +92,17 @@ class Settings(Toplevel):
 
         interface = self.interface_var_tmp.get()
         if 0 != call("ip link show " + interface, shell=True):
-            self.interface_var_tmp = self.parent.interface_var
-            errors[interface] = "Device \"" + interface + "\" does not exist"
-
-        source = int(self.source_var_tmp.get(), 16)
-        if 0x800 <= source or source < 0x000:
-            self.source_var_tmp = self.parent.source_var
-            errors[source] = "Source ID is not in range(0x000, 0x800)"
-
-        destination = int(self.destination_var_tmp.get(), 16)
-        if 0x800 <= destination or destination < 0x000:
-            self.destination_var_tmp = self.parent.destination_var
-            errors[destination] = "Source ID is not in range(0x000, 0x800)"
+            self.interface_var_tmp.set(self.parent.interface_var.get())
+            errors["interface"] = "Device \"" + interface + "\" does not exist"
 
         timer = self.timer_var_tmp.get()
         if 0 > timer or timer > 1440:
-            self.timer_var_tmp = self.parent.timer_var
-            errors[timer] = "Timer is not in range(0, 1440)"
+            self.timer_var_tmp.set(self.parent.timer_var.get())
+            errors["timer"] = "Timer is not in range(0, 1440)"
 
-        Error(self, errors)
-
+        # returns errors which is then evaluated in a statement, where a dict returns False, if empty
         return errors
+
+    def save(self):
+        self.parent.interface_var.set(self.interface_var_tmp.get())
+        self.parent.timer_var.set(self.timer_var_tmp.get())
